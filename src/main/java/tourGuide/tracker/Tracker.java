@@ -81,4 +81,7 @@ public class Tracker extends Thread {
 		}
 
 	}
+	public synchronized void finalizeTrack(User user) {
+		completedTrackingMap.put(user, true);
+	}
 }
