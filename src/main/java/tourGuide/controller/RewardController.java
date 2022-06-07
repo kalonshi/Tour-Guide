@@ -9,16 +9,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.jsoniter.output.JsonStream;
 
+import tourGuide.model.User;
 import tourGuide.service.RewardsService;
 import tourGuide.service.TourGuideService;
-import tourGuide.user.User;
 
 @RestController
 public class RewardController {
 	@Autowired
-	TourGuideService tourGuideService;
+	private TourGuideService tourGuideService;
 	@Autowired
-	RewardsService rewardService;
+	private RewardsService rewardService;
 
 	private User getUser(String userName) {
 		return tourGuideService.getUser(userName);

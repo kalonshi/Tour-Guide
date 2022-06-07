@@ -7,13 +7,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import tourGuide.model.UserPreferences;
 import tourGuide.service.TourGuideService;
-import tourGuide.user.UserPreferences;
 
 @RestController
 public class UserController {
 	@Autowired
-	TourGuideService tourGuideService;
+	private TourGuideService tourGuideService;
 
 	@RequestMapping("/")
 	public String index() {

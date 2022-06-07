@@ -11,9 +11,9 @@ import com.jsoniter.output.JsonStream;
 
 import gpsUtil.location.Attraction;
 import tourGuide.dto.RecommandedAttraction;
+import tourGuide.model.User;
 import tourGuide.service.GpsUtilService;
 import tourGuide.service.TourGuideService;
-import tourGuide.user.User;
 
 @RestController
 public class AttractionController {
@@ -21,7 +21,7 @@ public class AttractionController {
 	@Autowired
 	private GpsUtilService gpsUtilService;
 	@Autowired
-	TourGuideService tourGuideService;
+	private TourGuideService tourGuideService;
 
 	private User getUser(String userName) {
 		return tourGuideService.getUser(userName);

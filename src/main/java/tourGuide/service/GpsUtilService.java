@@ -16,7 +16,8 @@ import gpsUtil.location.Attraction;
 import gpsUtil.location.VisitedLocation;
 import tourGuide.comparatorTools.AttractionNameComparator;
 import tourGuide.dto.UserAttraction;
-import tourGuide.user.User;
+import tourGuide.model.User;
+import tourGuide.model.UserLocation;
 
 @Service
 public class GpsUtilService {
@@ -60,5 +61,14 @@ public class GpsUtilService {
 
 			tourGuideService.finalizeLocation(user, visitedLocation);
 		});
+	}
+	public void submitLocationApi(User user, TourGuideService tourGuideService) {
+		CompletableFuture.supplyAsync(() -> {
+			return getUserLocationApi(user.getUserId());
+		}, executor).thenAccept(userLocation -> {
+// TODO Corriger le problème de finalization de l'userlocation ( actuelement add visitedLocation
+			
+			tourGuideService.finalizeLocation(user, userLocation);
+			});
 	}
 }

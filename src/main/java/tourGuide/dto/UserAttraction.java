@@ -7,17 +7,22 @@ public class UserAttraction {
 	private String attractionName; 
 	private String city ;
     private String state ;
-	 private double  attractionLongitude;
-	 private double  attractionLattitude;
+	 private double  longitude;
+	 private double  latitude;
 	 
+	public UserAttraction() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
 	public UserAttraction(String attractionName, String city, String state, double attractionLongitude,
 			double attractionLattitude) {
 		super();
 		this.attractionName = attractionName;
 		this.city = city;
 		this.state = state;
-		this.attractionLongitude = attractionLongitude;
-		this.attractionLattitude = attractionLattitude;
+		this.longitude = attractionLongitude;
+		this.latitude = attractionLattitude;
 	}
 	
 	public UserAttraction(UUID attractionId, String attractionName, String city, String state,
@@ -27,8 +32,8 @@ public class UserAttraction {
 		this.attractionName = attractionName;
 		this.city = city;
 		this.state = state;
-		this.attractionLongitude = attractionLongitude;
-		this.attractionLattitude = attractionLattitude;
+		this.longitude = attractionLongitude;
+		this.latitude = attractionLattitude;
 	}
 
 	public String getAttractionName() {
@@ -49,17 +54,17 @@ public class UserAttraction {
 	public void setState(String state) {
 		this.state = state;
 	}
-	public double getAttractionLongitude() {
-		return attractionLongitude;
+	public double getLongitude() {
+		return longitude;
 	}
-	public void setAttractionLongitude(double attractionLongitude) {
-		this.attractionLongitude = attractionLongitude;
+	public void setLongitude(double attractionLongitude) {
+		this.longitude = attractionLongitude;
 	}
-	public double getAttractionLattitude() {
-		return attractionLattitude;
+	public double getLatitude() {
+		return latitude;
 	}
-	public void setAttractionLattitude(double attractionLattitude) {
-		this.attractionLattitude = attractionLattitude;
+	public void setLatitude(double attractionLattitude) {
+		this.latitude = attractionLattitude;
 	}
 	public UUID getAttractionId() {
 		return attractionId;

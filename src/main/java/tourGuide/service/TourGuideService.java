@@ -19,6 +19,7 @@ import java.util.stream.IntStream;
 import org.javamoney.moneta.Money;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import gpsUtil.GpsUtil;
@@ -28,16 +29,24 @@ import gpsUtil.location.VisitedLocation;
 import tourGuide.comparatorTools.RecommandedAttractionDistanceComparator;
 import tourGuide.dto.RecommandedAttraction;
 import tourGuide.dto.UserAttraction;
+import tourGuide.feign.IGpsUtils;
 import tourGuide.helper.InternalTestHelper;
-import tourGuide.tracker.Tracker;
-import tourGuide.user.User;
-import tourGuide.user.UserPreferences;
-import tourGuide.user.UserReward;
+import tourGuide.model.Tracker;
+import tourGuide.model.User;
+import tourGuide.model.UserLocation;
+
+import tourGuide.model.UserPreferences;
+import tourGuide.model.UserReward;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
 
 @Service
 public class TourGuideService {
+	
+	@Autowired
+	private  IGpsUtils iGpsUtils ;
+	
+	
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945;
 	private final GpsUtilService gpsUtilService;
@@ -144,16 +153,64 @@ public class TourGuideService {
 		tracker.finalizeTrack(user);
 
 	}
+	// ******TEST USERLOCATION 0406222 ****//
+		
+	
+	/*
+	 * methode de recuperation de la dernier user Location si elle existe sinon
+	 * ajouter la localisation actuelle de l'user avec trackUserLocation à MODIFIER:
+	 * Recuperation de l'object UserLocation
+	 */
+	public UserLocation getUserLocationFeign(User user) {
 
-	/* Liste des recentes localisations des users HashMap  */
-	  
-	  public HashMap<String, Location> getAllUsersCurrentLocations() {
-			HashMap<String, Location> allUsersCurrentLocations = new HashMap<>();
-			getAllUsers()
-					.forEach(u -> allUsersCurrentLocations.put(u.getUserId().toString(), u.getLastVisitedLocation().location));
-			return allUsersCurrentLocations;
-		}	 
+		if (user.getUserLocations().size() > 0) {
+			UserLocation userLocation = user.getLastUserLocation();
+			return userLocation;
+		} else {
+			trackUserLocationApi(user);
+			UserLocation userLocation = user.getLastUserLocation();
+			
+			return userLocation;
+		}
+	}
+	
+	/*
+	 * methode de recuperation de la localisation actuelle de l'user: Recuperation
+	 * de l'object VisitedLocation
+	 */
 
+	public void trackUserLocationApi(User user) {
+		gpsUtilService.submitLocationApi(user, this);
+	}
+	/*
+		 * Ajout de la localisation dans l'historique de Userlocalisation
+		 */
+
+		public void finalizeUserLocation(User user, UserLocation userLocation) {
+			user.addToUserLocations(userLocation);
+			System.out.println("liste des localisation=" + user.getUserLocations().size());
+			rewardsService.calculateRewards(user);
+			tracker.finalizeTrack(user);
+
+		}
+
+	/* Liste des recentes localisations des users HashMap */
+
+	public HashMap<String, Location> getAllUsersCurrentLocations() {
+		HashMap<String, Location> allUsersCurrentLocations = new HashMap<>();
+		getAllUsers().forEach(
+				u -> allUsersCurrentLocations.put(u.getUserId().toString(), u.getLastVisitedLocation().location));
+		return allUsersCurrentLocations;
+	}
+	/* Liste des recentes localisations des users HashMap */
+
+	public HashMap<String, tourGuide.model.Location> getAllUsersCurrentLocationsFeign() {
+		HashMap<String, tourGuide.model.Location> allUsersCurrentLocations = new HashMap<>();
+		getAllUsers().forEach(
+				u -> allUsersCurrentLocations.put(u.getUserId().toString(), u.getLastUserLocation().getLocation()));
+		
+		return allUsersCurrentLocations;
+	}
 	/** getAllAttractions **/
 	public List<RecommandedAttraction> getAllAttraction(User user) {
 		List<RecommandedAttraction> recommandedAttractions = new ArrayList<>();
@@ -174,13 +231,11 @@ public class TourGuideService {
 		 * user.getUserId()).location;
 		 */
 		for (UserAttraction userAttraction : gpsUtilService.getUserAttractions()) {
-			Location attractionLocation = new Location(userAttraction.getAttractionLattitude(),
-					userAttraction.getAttractionLongitude());
+			Location attractionLocation = new Location(userAttraction.getLatitude(), userAttraction.getLongitude());
 
 			recommandedAttractions.add(new RecommandedAttraction(userAttraction.getAttractionName(),
-					lastVistedLocation.latitude, lastVistedLocation.longitude, userAttraction.getAttractionLattitude(),
-					userAttraction.getAttractionLongitude(),
-					rewardsService.getDistance(lastVistedLocation, attractionLocation),
+					lastVistedLocation.latitude, lastVistedLocation.longitude, userAttraction.getLatitude(),
+					userAttraction.getLongitude(), rewardsService.getDistance(lastVistedLocation, attractionLocation),
 					rewardsService.getRewardPoints(userAttraction, user)));
 		}
 
@@ -202,6 +257,62 @@ public class TourGuideService {
 		return fiveClosestAttraction;
 	}
 
+	// Test UserLocation
+	
+	/** getAllAttractions **/
+	public List<RecommandedAttraction> getAllAttractionFeign(User user) {
+		List<RecommandedAttraction> recommandedAttractions = new ArrayList<>();
+		// Test VisitedLocation 080522
+		iGpsUtils.getLocation(user.getUserId());
+		while (user.getUserLocations().isEmpty()) {
+			try {
+				TimeUnit.MILLISECONDS.sleep(1000);
+			} catch (InterruptedException e) {
+			}
+		}
+		// Fin de Test UserLocation 
+
+		tourGuide.model.Location lastUserLocation = user.getUserLocations().get(user.getUserLocations().size() - 1).getLocation();
+		/*
+		 * Location
+		 * lastVistedLocationNull=gpsUtilService.getVisitedLocationFromUserLocation2(
+		 * user.getUserId()).location;
+		 */
+		for (UserAttraction userAttraction : iGpsUtils.getAttractions()) {
+			tourGuide.model.Location attractionLocation = new tourGuide.model.Location(userAttraction.getLatitude(), userAttraction.getLongitude());
+
+			recommandedAttractions.add(new RecommandedAttraction(userAttraction.getAttractionName(),
+					lastUserLocation.getLatitude(), lastUserLocation.getLongitude(), userAttraction.getLatitude(),
+					userAttraction.getLongitude(), rewardsService.getDistanceFeign(lastUserLocation, attractionLocation),
+					rewardsService.getRewardPoints(userAttraction, user)));
+		}
+
+		Collections.sort(recommandedAttractions, new RecommandedAttractionDistanceComparator());
+		return recommandedAttractions;
+	}
+
+	/** Closest five attractions **/
+	public List<RecommandedAttraction> getFiveClosestAttractionFeign(User user) {
+		List<RecommandedAttraction> recommandedAttractions = getAllAttractionFeign(user);
+		List<RecommandedAttraction> fiveClosestAttraction = new ArrayList<>();
+		for (int i = 0; i < 5; i++) {
+			fiveClosestAttraction.add(new RecommandedAttraction(recommandedAttractions.get(i).getAttractionName(),
+					recommandedAttractions.get(i).getUserLat(), recommandedAttractions.get(i).getUserLong(),
+					recommandedAttractions.get(i).getAttractionLat(), recommandedAttractions.get(i).getAttractionLong(),
+					recommandedAttractions.get(i).getDistance(), recommandedAttractions.get(i).getRewardPoint()));
+		}
+
+		return fiveClosestAttraction;
+	}
+	
+	
+	
+	
+	
+	
+	
+	//
+	
 	public double getDistance(Location loc1, Location loc2) {
 		double lat1 = Math.toRadians(loc1.latitude);
 		double lon1 = Math.toRadians(loc1.longitude);
@@ -242,12 +353,28 @@ public class TourGuideService {
 			String email = userName + "@tourGuide.com";
 			User user = new User(UUID.randomUUID(), userName, phone, email);
 			generateUserLocationHistory(user);
-			 generateUserPreferences( user);
+			generateUserLocationDTOHistory(user);
+			generateUserPreferences(user);
 			internalUserMap.put(userName, user);
 		});
 		((org.slf4j.Logger) logger)
 				.debug("Created " + InternalTestHelper.getInternalUserNumber() + " internal test users.");
 	}
+//******Test UserLocation****************
+	/*
+	 * private void generateUserLocationHistory2(User user) { IntStream.range(0,
+	 * 3).forEach(i -> { user.addToUserLocations(new UserLocation(user.getUserId(),
+	 * new Location(generateRandomLatitude(), generateRandomLongitude()),
+	 * getRandomTime()));
+	 * 
+	 * user.addToUserLocations(new UserLocation(user.getUserId(), new
+	 * Location(generateRandomLatitude(), generateRandomLongitude()),
+	 * getRandomTime()));
+	 * 
+	 * }); }
+	 * 
+	 * 
+	 */
 
 	private void generateUserLocationHistory(User user) {
 		IntStream.range(0, 3).forEach(i -> {
@@ -255,16 +382,25 @@ public class TourGuideService {
 					new Location(generateRandomLatitude(), generateRandomLongitude()), getRandomTime()));
 		});
 	}
+	private void generateUserLocationDTOHistory(User user) {
+		IntStream.range(0, 3).forEach(i -> {
+			user.addToUserLocations(new UserLocation(user.getUserId(),new tourGuide.model.Location(generateRandomLatitude(), generateRandomLongitude()),getRandomTime())
+					);
+		});
+	}
 	private void generateUserPreferences(User user) {
 		UserPreferences userPreferences = new UserPreferences();
 		userPreferences.setNumberOfAdults(new Random().nextInt(3) + 1);
 		userPreferences.setNumberOfChildren(new Random().nextInt(5));
 		userPreferences.setLowerPricePoint(Money.of(new Random().nextInt(1000), userPreferences.getCurrency()));
-		userPreferences.setHighPricePoint(Money.of(new Random().nextInt(5000), userPreferences.getCurrency()).add(userPreferences.getLowerPricePoint()));
+		userPreferences.setHighPricePoint(Money.of(new Random().nextInt(5000), userPreferences.getCurrency())
+				.add(userPreferences.getLowerPricePoint()));
 		userPreferences.setTripDuration(new Random().nextInt(14) + 1);
-		userPreferences.setTicketQuantity(userPreferences.getNumberOfAdults() + userPreferences.getNumberOfChildren() / 2);
+		userPreferences
+				.setTicketQuantity(userPreferences.getNumberOfAdults() + userPreferences.getNumberOfChildren() / 2);
 		user.setUserPreferences(userPreferences);
 	}
+
 	private double generateRandomLongitude() {
 		double leftLimit = -180;
 		double rightLimit = 180;
@@ -281,11 +417,15 @@ public class TourGuideService {
 		LocalDateTime localDateTime = LocalDateTime.now().minusDays(new Random().nextInt(30));
 		return Date.from(localDateTime.toInstant(ZoneOffset.UTC));
 	}
-	/**Save userPreferences for a  User**/
-	public UserPreferences saveUserPreference(String userName,UserPreferences userPreferences) {
-		
+
+	/** Save userPreferences for a User **/
+	public UserPreferences saveUserPreference(String userName, UserPreferences userPreferences) {
+
 		getUser(userName).setUserPreferences(userPreferences);
-		return userPreferences ;
+		return userPreferences;
 	}
+
+	
+	
 
 }

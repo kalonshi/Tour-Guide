@@ -1,4 +1,4 @@
-package tourGuide.user;
+package tourGuide.model;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -17,6 +17,9 @@ public class User {
 	private String emailAddress;
 	private Date latestLocationTimestamp;
 	private List<VisitedLocation> visitedLocations = new ArrayList<>();
+	
+	private List<UserLocation> userLocations = new ArrayList<>();
+		
 	private List<UserReward> userRewards = new ArrayList<>();
 	private UserPreferences userPreferences = new UserPreferences();
 	private List<Provider> tripDeals = new ArrayList<>();
@@ -67,7 +70,8 @@ public class User {
 		visitedLocations.add(visitedLocation);
 		userLocationListLock.unlock();
 	}
-
+	
+	
 	public List<VisitedLocation> getVisitedLocations() {
 		userLocationListLock.lock();
 		try {
@@ -76,7 +80,7 @@ public class User {
 			userLocationListLock.unlock();
 		}
 	}
-
+	
 	public void clearVisitedLocations() {
 		userLocationListLock.lock();
 		visitedLocations.clear();
@@ -86,7 +90,58 @@ public class User {
 	public VisitedLocation getLastVisitedLocation() {
 		return visitedLocations.get(visitedLocations.size() - 1);
 	}
+	
+	//************* UserLocation test*********/
+	//03062022
+			public void addToUserLocations(UserLocation userLocation) {
+				userLocationListLock.lock();
+				userLocations.add(userLocation);
+				userLocationListLock.unlock();
+			}
+		//03062022
+		public List<UserLocation> getUserLocations() {
+			userLocationListLock.lock();
+			try {
+				return userLocations;
+			} finally {
+				userLocationListLock.unlock();
+			}
+		}
+//03062022
+	
+	public UserLocation getLastUserLocation() {
+		return userLocations.get(userLocations.size() - 1);
+	}
+	public void clearUserLocations() {
+		userLocationListLock.lock();
+		userLocations.clear();
+		userLocationListLock.unlock();
+	}
+	//03062022
+	/*
+	 * public void addToUserLocations(UserLocation userLocation) {
+	 * userLocationListLock.lock(); userLocations.add(userLocation);
+	 * userLocationListLock.unlock(); }
+	 */
+//03062022
+	/*
+	 * public List<UserLocation2> getUserLocations2() { userLocationListLock.lock();
+	 * try { return userLocations ; } finally { userLocationListLock.unlock(); } }
+	 * //03062022
+	 * 
+	 * public UserLocation getLastUserLocation2() { return
+	 * userLocations.get(userLocations.size() - 1); }
+	 */
 
+
+	/////********************************************////
+	
+	
+	
+	
+	
+	
+	
 	public synchronized void addUserReward(UserReward userReward) {
 		userRewards.add(userReward);
 	}
