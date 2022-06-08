@@ -14,7 +14,10 @@ import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
 import tourGuide.dto.UserAttraction;
+import tourGuide.feign.IGpsUtils;
+import tourGuide.feign.IRewardCentral;
 import tourGuide.model.User;
+import tourGuide.model.UserLocation;
 import tourGuide.model.UserReward;
 
 @Service
@@ -24,14 +27,19 @@ public class RewardsService {
 	private int proximityBufferMiles = 10;
 
 	private final RewardCentral rewardsCentral;
-
+	
 	private final GpsUtilService gpsUtilService;
-
+	
+	
+	
+	
+	
 	private ExecutorService executor = Executors.newFixedThreadPool(1000);
 
 	public RewardsService(GpsUtilService gpsUtilService, RewardCentral rewardCentral) {
 		this.rewardsCentral = rewardCentral;
 		this.gpsUtilService = gpsUtilService;
+	
 	}
 
 	public void setProximityBuffer(int proximityBuffer) {
@@ -124,6 +132,9 @@ public class RewardsService {
 		double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;
 		return statuteMiles;
 	}
+	
+
+	
 	public double getDistanceFeign(tourGuide.model.Location loc1, tourGuide.model.Location loc2) {
 		double lat1 = Math.toRadians(loc1.getLatitude());
 		double lon1 = Math.toRadians(loc1.getLongitude());

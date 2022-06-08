@@ -30,6 +30,7 @@ import tourGuide.comparatorTools.RecommandedAttractionDistanceComparator;
 import tourGuide.dto.RecommandedAttraction;
 import tourGuide.dto.UserAttraction;
 import tourGuide.feign.IGpsUtils;
+import tourGuide.feign.IRewardCentral;
 import tourGuide.helper.InternalTestHelper;
 import tourGuide.model.Tracker;
 import tourGuide.model.User;
@@ -42,11 +43,12 @@ import tripPricer.TripPricer;
 
 @Service
 public class TourGuideService {
+
+	 @Autowired 
+	private GpsUtilServiceFeign gpsUtilServiceFeign;
 	
-	@Autowired
-	private  IGpsUtils iGpsUtils ;
-	
-	
+	 
+	 
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private static final double STATUTE_MILES_PER_NAUTICAL_MILE = 1.15077945;
 	private final GpsUtilService gpsUtilService;
@@ -99,6 +101,12 @@ public class TourGuideService {
 	public List<UserReward> getUserRewards(User user) {
 		return user.getUserRewards();
 	}
+
+	// Add userReward_DTO 0706
+	
+	  public List<tourGuide.dto.UserReward> getUserRewardsFeign(User user) { return
+	  user.getUserRewardsfeign(); }
+	 
 
 	public User getUser(String userName) {
 		return internalUserMap.get(userName);
@@ -154,8 +162,7 @@ public class TourGuideService {
 
 	}
 	// ******TEST USERLOCATION 0406222 ****//
-		
-	
+
 	/*
 	 * methode de recuperation de la dernier user Location si elle existe sinon
 	 * ajouter la localisation actuelle de l'user avec trackUserLocation à MODIFIER:
@@ -169,11 +176,11 @@ public class TourGuideService {
 		} else {
 			trackUserLocationApi(user);
 			UserLocation userLocation = user.getLastUserLocation();
-			
+
 			return userLocation;
 		}
 	}
-	
+
 	/*
 	 * methode de recuperation de la localisation actuelle de l'user: Recuperation
 	 * de l'object VisitedLocation
@@ -183,16 +190,19 @@ public class TourGuideService {
 		gpsUtilService.submitLocationApi(user, this);
 	}
 	/*
-		 * Ajout de la localisation dans l'historique de Userlocalisation
-		 */
+	 * Ajout de la localisation dans l'historique de Userlocalisation
+	 */
 
-		public void finalizeUserLocation(User user, UserLocation userLocation) {
-			user.addToUserLocations(userLocation);
-			System.out.println("liste des localisation=" + user.getUserLocations().size());
-			rewardsService.calculateRewards(user);
-			tracker.finalizeTrack(user);
+	public void finalizeUserLocation(User user, UserLocation userLocation) {
+		user.addToUserLocations(userLocation);
+		System.out.println("liste des localisation=" + user.getUserLocations().size());
+		 rewardsService.calculateRewards(user); 
+		
+		/* rewardsServiceFeign.calculateUserAttractionRewards(user); */
+		 
+		tracker.finalizeTrack(user);
 
-		}
+	}
 
 	/* Liste des recentes localisations des users HashMap */
 
@@ -208,9 +218,10 @@ public class TourGuideService {
 		HashMap<String, tourGuide.model.Location> allUsersCurrentLocations = new HashMap<>();
 		getAllUsers().forEach(
 				u -> allUsersCurrentLocations.put(u.getUserId().toString(), u.getLastUserLocation().getLocation()));
-		
+
 		return allUsersCurrentLocations;
 	}
+
 	/** getAllAttractions **/
 	public List<RecommandedAttraction> getAllAttraction(User user) {
 		List<RecommandedAttraction> recommandedAttractions = new ArrayList<>();
@@ -225,11 +236,7 @@ public class TourGuideService {
 		// Fin de Test VisitedLocation 080522
 
 		Location lastVistedLocation = user.getVisitedLocations().get(user.getVisitedLocations().size() - 1).location;
-		/*
-		 * Location
-		 * lastVistedLocationNull=gpsUtilService.getVisitedLocationFromUserLocation2(
-		 * user.getUserId()).location;
-		 */
+		
 		for (UserAttraction userAttraction : gpsUtilService.getUserAttractions()) {
 			Location attractionLocation = new Location(userAttraction.getLatitude(), userAttraction.getLongitude());
 
@@ -257,62 +264,8 @@ public class TourGuideService {
 		return fiveClosestAttraction;
 	}
 
-	// Test UserLocation
 	
-	/** getAllAttractions **/
-	public List<RecommandedAttraction> getAllAttractionFeign(User user) {
-		List<RecommandedAttraction> recommandedAttractions = new ArrayList<>();
-		// Test VisitedLocation 080522
-		iGpsUtils.getLocation(user.getUserId());
-		while (user.getUserLocations().isEmpty()) {
-			try {
-				TimeUnit.MILLISECONDS.sleep(1000);
-			} catch (InterruptedException e) {
-			}
-		}
-		// Fin de Test UserLocation 
 
-		tourGuide.model.Location lastUserLocation = user.getUserLocations().get(user.getUserLocations().size() - 1).getLocation();
-		/*
-		 * Location
-		 * lastVistedLocationNull=gpsUtilService.getVisitedLocationFromUserLocation2(
-		 * user.getUserId()).location;
-		 */
-		for (UserAttraction userAttraction : iGpsUtils.getAttractions()) {
-			tourGuide.model.Location attractionLocation = new tourGuide.model.Location(userAttraction.getLatitude(), userAttraction.getLongitude());
-
-			recommandedAttractions.add(new RecommandedAttraction(userAttraction.getAttractionName(),
-					lastUserLocation.getLatitude(), lastUserLocation.getLongitude(), userAttraction.getLatitude(),
-					userAttraction.getLongitude(), rewardsService.getDistanceFeign(lastUserLocation, attractionLocation),
-					rewardsService.getRewardPoints(userAttraction, user)));
-		}
-
-		Collections.sort(recommandedAttractions, new RecommandedAttractionDistanceComparator());
-		return recommandedAttractions;
-	}
-
-	/** Closest five attractions **/
-	public List<RecommandedAttraction> getFiveClosestAttractionFeign(User user) {
-		List<RecommandedAttraction> recommandedAttractions = getAllAttractionFeign(user);
-		List<RecommandedAttraction> fiveClosestAttraction = new ArrayList<>();
-		for (int i = 0; i < 5; i++) {
-			fiveClosestAttraction.add(new RecommandedAttraction(recommandedAttractions.get(i).getAttractionName(),
-					recommandedAttractions.get(i).getUserLat(), recommandedAttractions.get(i).getUserLong(),
-					recommandedAttractions.get(i).getAttractionLat(), recommandedAttractions.get(i).getAttractionLong(),
-					recommandedAttractions.get(i).getDistance(), recommandedAttractions.get(i).getRewardPoint()));
-		}
-
-		return fiveClosestAttraction;
-	}
-	
-	
-	
-	
-	
-	
-	
-	//
-	
 	public double getDistance(Location loc1, Location loc2) {
 		double lat1 = Math.toRadians(loc1.latitude);
 		double lon1 = Math.toRadians(loc1.longitude);
@@ -326,6 +279,58 @@ public class TourGuideService {
 		double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;
 		return statuteMiles;
 	}
+	// Test GPS Util API UserLocation
+
+		/** getAllAttractions **/
+		public List<RecommandedAttraction> getAllAttractionFeign(User user) {
+			List<RecommandedAttraction> recommandedAttractions = new ArrayList<>();
+			// Test VisitedLocation 080522
+			gpsUtilServiceFeign.getUserLocationApi(user.getUserId());
+			while (user.getUserLocations().isEmpty()) {
+				try {
+					TimeUnit.MILLISECONDS.sleep(1000);
+				} catch (InterruptedException e) {
+				}
+			}
+			// Fin de Test UserLocation
+
+			tourGuide.model.Location lastUserLocation = user.getUserLocations().get(user.getUserLocations().size() - 1)
+					.getLocation();
+			/*
+			 * Location
+			 * lastVistedLocationNull=gpsUtilService.getVisitedLocationFromUserLocation2(
+			 * user.getUserId()).location;
+			 */
+			for (UserAttraction userAttraction : gpsUtilServiceFeign.getAttractions()) {
+				tourGuide.model.Location attractionLocation = new tourGuide.model.Location(userAttraction.getLatitude(),
+						userAttraction.getLongitude());
+
+				recommandedAttractions.add(new RecommandedAttraction(userAttraction.getAttractionName(),
+						lastUserLocation.getLatitude(), lastUserLocation.getLongitude(), userAttraction.getLatitude(),
+						userAttraction.getLongitude(),
+						rewardsService.getDistanceFeign(lastUserLocation, attractionLocation),
+						rewardsService.getRewardPoints(userAttraction, user)));
+			}
+
+			Collections.sort(recommandedAttractions, new RecommandedAttractionDistanceComparator());
+			return recommandedAttractions;
+		}
+
+		/** Closest five attractions **/
+		public List<RecommandedAttraction> getFiveClosestAttractionFeign(User user) {
+			List<RecommandedAttraction> recommandedAttractions = getAllAttractionFeign(user);
+			List<RecommandedAttraction> fiveClosestAttraction = new ArrayList<>();
+			for (int i = 0; i < 5; i++) {
+				fiveClosestAttraction.add(new RecommandedAttraction(recommandedAttractions.get(i).getAttractionName(),
+						recommandedAttractions.get(i).getUserLat(), recommandedAttractions.get(i).getUserLong(),
+						recommandedAttractions.get(i).getAttractionLat(), recommandedAttractions.get(i).getAttractionLong(),
+						recommandedAttractions.get(i).getDistance(), recommandedAttractions.get(i).getRewardPoint()));
+			}
+
+			return fiveClosestAttraction;
+		}
+
+		//
 
 	public List<Provider> getTripDeals(User user) {
 		int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
@@ -382,12 +387,15 @@ public class TourGuideService {
 					new Location(generateRandomLatitude(), generateRandomLongitude()), getRandomTime()));
 		});
 	}
+
 	private void generateUserLocationDTOHistory(User user) {
 		IntStream.range(0, 3).forEach(i -> {
-			user.addToUserLocations(new UserLocation(user.getUserId(),new tourGuide.model.Location(generateRandomLatitude(), generateRandomLongitude()),getRandomTime())
-					);
+			user.addToUserLocations(new UserLocation(user.getUserId(),
+					new tourGuide.model.Location(generateRandomLatitude(), generateRandomLongitude()),
+					getRandomTime()));
 		});
 	}
+
 	private void generateUserPreferences(User user) {
 		UserPreferences userPreferences = new UserPreferences();
 		userPreferences.setNumberOfAdults(new Random().nextInt(3) + 1);
@@ -424,8 +432,5 @@ public class TourGuideService {
 		getUser(userName).setUserPreferences(userPreferences);
 		return userPreferences;
 	}
-
-	
-	
 
 }

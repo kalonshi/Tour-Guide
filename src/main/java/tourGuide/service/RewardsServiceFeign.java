@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import gpsUtil.GpsUtil;
@@ -14,7 +15,10 @@ import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
 import tourGuide.dto.UserAttraction;
+import tourGuide.feign.IGpsUtils;
+import tourGuide.feign.IRewardCentral;
 import tourGuide.model.User;
+import tourGuide.model.UserLocation;
 import tourGuide.model.UserReward;
 
 @Service
@@ -23,15 +27,18 @@ public class RewardsServiceFeign {
 
 	private int proximityBufferMiles = 10;
 
-	private final RewardCentral rewardsCentral;
-
-	private final GpsUtilService gpsUtilService;
+	@Autowired
+	private IRewardCentral iRewardCentral;
+	
+	@Autowired
+	private GpsUtilServiceFeign gpsUtilServiceFeign;
 
 	private ExecutorService executor = Executors.newFixedThreadPool(1000);
 
-	public RewardsServiceFeign(GpsUtilService gpsUtilService, RewardCentral rewardCentral) {
-		this.rewardsCentral = rewardCentral;
-		this.gpsUtilService = gpsUtilService;
+	public RewardsServiceFeign(IRewardCentral iRewardCentral, GpsUtilServiceFeign gpsUtilServiceFeign) {
+		super();
+		this.iRewardCentral = iRewardCentral;
+		this.gpsUtilServiceFeign = gpsUtilServiceFeign;
 	}
 
 	public void setProximityBuffer(int proximityBuffer) {
@@ -40,82 +47,60 @@ public class RewardsServiceFeign {
 
 //old code
 
-	public void calculateRewards(User user) {
-		List<Attraction> attractions = gpsUtilService.getAttractions();
-		List<VisitedLocation> visitedLocationList = user.getVisitedLocations().stream().collect(Collectors.toList());
+	public void calculateUserAttractionRewards(User user) {
+		List<UserAttraction> userAttractions = gpsUtilServiceFeign.getAttractions();
+		List<UserLocation> userLocations = user.getUserLocations().stream().collect(Collectors.toList());
 		/* int i = 1; */
 		/* int j = 0; */
-		for (VisitedLocation visitedLocation : visitedLocationList) {
+		for (UserLocation userLocation : userLocations) {
 
-			/*
-			 * System.out.println("VisitedLocation visitedLocation latitude=" +
-			 * visitedLocation.location.latitude);
-			 * System.out.println("nb de visited location : " + i); i++;
-			 * 
-			 * System.out.println("nb de visited location : " + i); i++;
-			 */
-			for (Attraction attraction : attractions) {
-
-				/*
-				 * System.out.println("attraction.attractionName=" + attraction.attractionName);
-				 * 
-				 * System.out.println("attractionId=" + attraction.attractionId);
-				 * 
-				 * System.out.println("user.getUserRewards() size =" +
-				 * user.getUserRewards().size());
-				 * 
-				 * System.out.println("userName :" + user.getUserName());
-				 * System.out.println("userName visited location size :" +
-				 * user.getVisitedLocations().size());
-				 */
-				if (user.getUserRewards().stream()
-						.filter(r -> r.attraction.attractionName.equals(attraction.attractionName)).count() == 0) {
-					calculateDistanceReward(user, visitedLocation, attraction);
-
-					/*
-					 * System.out.println("nb reward : " + j); j++;
-					 */
-
+			for (UserAttraction userAttraction : userAttractions) {
+				if (user.getUserRewardsfeign().stream().filter(rewardFeign -> rewardFeign.userAttraction
+						.getAttractionName().equals(userAttraction.getAttractionName())).count() == 0) {
+					calculateDistanceRewardFeign(user, userLocation, userAttraction);
 				}
+
 			}
+
 		}
 	}
 
-		public void calculateDistanceReward(User user, VisitedLocation visitedLocation, Attraction attraction) {
-		Double distance = getDistance(attraction, visitedLocation.location);
+	public void calculateDistanceRewardFeign(User user, UserLocation userLocation, UserAttraction userAttraction) {
+		tourGuide.model.Location loc = new tourGuide.model.Location(userAttraction.getLatitude(),
+				userAttraction.getLongitude());
+		Double distance = getDistanceFeign(loc, userLocation.getLocation());
 		/*
 		 * System.out.println("distance :"+distance+"<= proximityBufferMiles"+
 		 * proximityBufferMiles);
 		 */if (distance <= proximityBufferMiles) {
-			UserReward userReward = new UserReward(visitedLocation, attraction, distance.intValue());
-			submitRewardPoints(userReward, attraction, user);
+			tourGuide.dto.UserReward userReward = new tourGuide.dto.UserReward(userLocation, userAttraction,
+					distance.intValue());
+			submitRewardPointsFeign(userReward, userAttraction, user);
 
-			System.out.println("attraction reward: " + attraction.attractionName);
+			System.out.println("attractionFeign reward: " + userAttraction.getAttractionName());
 
 		}
 	}
 
-	private void submitRewardPoints(UserReward userReward, Attraction attraction, User user) {
-		// userReward.setRewardPoints(10);
-		// user.addUserReward(userReward);
+	private void submitRewardPointsFeign(tourGuide.dto.UserReward userReward, UserAttraction userAttraction,
+			User user) {
+
 		CompletableFuture.supplyAsync(() -> {
-			return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
+			return iRewardCentral.getAttractionRewardPoints(userAttraction.getAttractionId(), user.getUserId());
 		}, executor).thenAccept(points -> {
 			userReward.setRewardPoints(points);
-			user.addUserReward(userReward);
+			/* user.addUserRewardFeign(userReward); */
 		});
 	}
+	public int getRewardPointsFeign(UserAttraction attraction, User user) {
 
-	public int getRewardPoints(UserAttraction attraction, User user) {
-
-		return rewardsCentral.getAttractionRewardPoints(attraction.getAttractionId(), user.getUserId());
+		return iRewardCentral.getAttractionRewardPoints(attraction.getAttractionId(), user.getUserId());
 	}
-
-	public double getDistance(Location loc1, Location loc2) {
-		double lat1 = Math.toRadians(loc1.latitude);
-		double lon1 = Math.toRadians(loc1.longitude);
-		double lat2 = Math.toRadians(loc2.latitude);
-		double lon2 = Math.toRadians(loc2.longitude);
+	public double getDistanceFeign(tourGuide.model.Location loc, tourGuide.model.Location location) {
+		double lat1 = Math.toRadians(loc.getLatitude());
+		double lon1 = Math.toRadians(loc.getLongitude());
+		double lat2 = Math.toRadians(location.getLatitude());
+		double lon2 = Math.toRadians(location.getLongitude());
 
 		double angle = Math
 				.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2));

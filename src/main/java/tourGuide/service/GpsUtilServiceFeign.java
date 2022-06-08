@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import gpsUtil.GpsUtil;
@@ -23,6 +24,7 @@ import tourGuide.model.UserLocation;
 
 @Service
 public class GpsUtilServiceFeign {
+	@Autowired 
 	private IGpsUtils iGpsUtils;
 private ExecutorService executor = Executors.newFixedThreadPool(1000);
 

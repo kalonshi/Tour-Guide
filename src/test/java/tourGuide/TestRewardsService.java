@@ -45,7 +45,7 @@ public class TestRewardsService {
 		tourGuideService.tracker.stopTracker();
 		List<UserReward> userRewards = user.getUserRewards();
 		System.out.println("userRewards.size():  " + userRewards.size());
-		
+		System.out.println("userRewards.value:  " + userRewards.get(0).getRewardPoints());
 		assertTrue(userRewards.size() == 1);
 	}
 

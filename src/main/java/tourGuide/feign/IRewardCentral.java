@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 public interface IRewardCentral {
 	 @GetMapping("/getAttractionRewardPoints")
-	    public int getAttractionRewardPoints(@RequestParam UUID userId,@RequestParam UUID attractionId);
+	    public int getAttractionRewardPoints(@RequestParam("userId") UUID userId,@RequestParam("attractionId") UUID attractionId);
 	        
 	    
 }

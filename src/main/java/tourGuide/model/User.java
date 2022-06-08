@@ -21,6 +21,9 @@ public class User {
 	private List<UserLocation> userLocations = new ArrayList<>();
 		
 	private List<UserReward> userRewards = new ArrayList<>();
+	
+	  private List<tourGuide.dto.UserReward> userRewardsfeign = new ArrayList<>();
+	 
 	private UserPreferences userPreferences = new UserPreferences();
 	private List<Provider> tripDeals = new ArrayList<>();
 
@@ -118,11 +121,13 @@ public class User {
 		userLocationListLock.unlock();
 	}
 	//03062022
+	
 	/*
 	 * public void addToUserLocations(UserLocation userLocation) {
 	 * userLocationListLock.lock(); userLocations.add(userLocation);
 	 * userLocationListLock.unlock(); }
 	 */
+	 
 //03062022
 	/*
 	 * public List<UserLocation2> getUserLocations2() { userLocationListLock.lock();
@@ -145,7 +150,16 @@ public class User {
 	public synchronized void addUserReward(UserReward userReward) {
 		userRewards.add(userReward);
 	}
-
+	// add method to userRewardFeign
+	
+	  public synchronized void addUserRewardFeign(tourGuide.dto.UserReward
+	  userReward) { userRewardsfeign.add(userReward); }
+	  
+	  public List<tourGuide.dto.UserReward> getUserRewardsfeign() { return
+	  userRewardsfeign; }
+	 
+	
+	// End test 070622
 	public List<UserReward> getUserRewards() {
 		return userRewards;
 	}
